@@ -28,97 +28,17 @@ It ingests Grab orders in real time, translates them into Loyverse format, track
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        DATA SOURCES                         │
-│                                                             │
-│   Grab Food App          Loyverse POS         Grab UUID     │
-│   (delivery orders)      (walk-in orders)     (customer ID) │
-└────────┬─────────────────────┬──────────────────┬───────────┘
-         │  Webhook (JSON)     │  API Pull         │  Metadata
-         ▼                     ▼                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     INGESTION LAYER                         │
-│                                                             │
-│   Webhook Listener       Loyverse API        UUID Extractor │
-│   Signature verify       Validate + format   Attach hidden  │
-│   Python · GCF           Python · GCF        metadata       │
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│              CORE ENGINE  (Python · Google Cloud Functions) │
-│                                                             │
-│   ┌──────────────────┐  ┌──────────────┐  ┌─────────────┐  │
-│   │ Data             │  │ SKU          │  │ Financial   │  │
-│   │ Transformation   │  │ Resolution   │  │ Reconcile   │  │
-│   │ Grab → Loyverse  │  │ Item mapping │  │ Commission  │  │
-│   └──────────────────┘  └──────────────┘  └─────────────┘  │
-└──────────┬──────────────────┬────────────────────┬──────────┘
-           │                  │                    │
-           ▼                  ▼                    ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       STORAGE LAYER                         │
-│                                                             │
-│   Order Queue            UUID Database       Sync Log       │
-│   PostgreSQL             Firebase            All events     │
-│   Offline fail-safe      Customer map        Errors/retries │
-└──────────┬──────────────────┬────────────────────┬──────────┘
-           │                  │                    │
-           ▼                  ▼                    ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       OUTPUT LAYER                          │
-│                                                             │
-│   Loyverse POS           Kitchen Display     Infotech       │
-│   Receipt auto-created   Grab + walk-in      CSV / JSON     │
-│   Kitchen ticket sent    unified view        Auto scheduled │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    FLUTTER DASHBOARD                        │
-│           Web · iOS · Android — owner & manager view        │
-│      Live sync logs · Daily summary · Customer insights     │
-└─────────────────────────────────────────────────────────────┘
-```
+![System Architecture](docs/architecture.png)
+
+*Screenshot of the full system architecture diagram showing all layers — data sources, ingestion, core engine, storage, output, and Flutter dashboard.*
 
 ---
 
 ## Workflow — What Happens to Every Order
 
-```
-Step 1   Customer places order on Grab
-         └─► Grab sends a secure webhook (JSON) to our backend instantly
+![Data Flow](docs/dataflow.png)
 
-Step 2   Webhook listener receives the order
-         ├─► Verify cryptographic signature (security)
-         ├─► Validate all required fields (completeness)
-         └─► Extract hidden Grab Customer UUID (identity)
-
-Step 3   Data transformation
-         └─► Convert Grab format → Loyverse format
-             Match item names to Loyverse SKUs
-
-Step 4   Internet check
-         ├─► Online  → push to Loyverse API immediately
-         └─► Offline → store in PostgreSQL queue
-                       auto-retry when connection restores
-                       zero orders lost
-
-Step 5   Push to Loyverse POS
-         ├─► Receipt created automatically
-         ├─► Kitchen ticket generated
-         └─► Both Grab + walk-in orders visible in unified kitchen view
-
-Step 6   End-of-day reconciliation
-         ├─► Compare Grab settlement vs Loyverse receipts
-         ├─► Separate: Gross Sales / Commission (30%) / Net Payout
-         └─► Flag any unmatched anomalies for review
-
-Step 7   Auto export to Infotech
-         └─► Perfectly balanced daily ledger
-             CSV / JSON format · scheduled · no manual action
-```
+*Step-by-step data flow: from Grab order placement through webhook ingestion, transformation, offline queue failsafe, POS push, end-of-day reconciliation, and Infotech export.*
 
 ---
 
@@ -126,25 +46,14 @@ Step 7   Auto export to Infotech
 
 Grab hides all customer phone numbers for privacy compliance. Our system works around this using **Grab Customer UUIDs** — anonymous alphanumeric identifiers included in every order payload.
 
-```
-Order arrives
-     │
-     ▼
-Extract UUID from payload
-     │
-     ├── UUID exists in database?
-     │        │
-     │        ├── YES → Update profile
-     │        │         (visit count +1, total spend updated)
-     │        │
-     │        └── NO  → Create new "Grab User" profile
-     │
-     ▼
-Business insights unlocked:
-  • New vs Repeat customers (across delivery + walk-in)
-  • High-value customers (ranked by cumulative spend)
-  • Inactive customers (30+ days — for re-engagement campaigns)
-```
+![UUID Flow](docs/uuid_flow.png)
+
+*UUID lookup logic: new customers get a profile created automatically, returning customers get their visit count and spend updated — all without accessing restricted phone number data.*
+
+The result unlocks three business insights previously unavailable:
+- **New vs Repeat customers** — tracked across both delivery and walk-in channels
+- **High-value customers** — automatically ranked by cumulative spend
+- **Inactive customers** — identified for re-engagement campaigns (30+ days without an order)
 
 ---
 
@@ -180,18 +89,16 @@ The reconciliation layer does not estimate or approximate. It compares every Gra
 
 ## Live Prototype
 
-A working demonstration of the core workflow — real-time order sync, unified kitchen display, and automated financial reconciliation — has been built using **Google Sheets + Apps Script** to simulate the middleware layer.
+A working demonstration of the core workflow — real-time order sync, unified kitchen display, and automated financial reconciliation — built using **Google Sheets + Apps Script** to simulate the middleware layer.
 
-**[View Live Demo →](https://docs.google.com/spreadsheets/d/1i9kTp1SCWkNQZ-W0c8lRU1hvbQlYgSdq4f3X9R1L90g/edit?usp=sharing)**
+**[▶ Launch Live Demo](https://script.google.com/macros/s/AKfycbzSFasZkuwxpValKgDpgm4BIJ3k1T2J3QiV7PNvNYXuZCQJELg5qVcYi3kuimnL22s0/exec)**
 
-The prototype demonstrates:
-- `Incoming_Orders` — Grab orders auto-synced with status tracking
-- `Loyverse_Orders` — Walk-in orders from POS
-- `Kitchen_Display` — Unified view merging both order streams
-- `Daily_Summary` — Auto-generated financial report with commission breakdown
-- `Sync_Log` — Full event log including error and retry events
-- `Financial_History` — Permanent daily record, never overwritten
-- `Order_History` — Archived orders with date stamps
+Click any button in the demo — no login, no typing required. The demo simulates:
+- `▶ New Grab Order` — webhook triggers, order syncs to kitchen in under 3 seconds
+- `🧾 New Walk-In` — POS order pushed to unified kitchen view
+- `🍳 Update Kitchen Status` — cycles order through New → Preparing → Completed
+- `📊 Close Day` — auto-generates financial summary with Grab commission breakdown
+- `🔄 New Day Reset` — clears active sheets, preserves all history
 
 ---
 
@@ -234,6 +141,15 @@ The result is a system that is resilient by design, compliant by default, and re
 | Phase 4 | Jun 2026 | Flutter dashboard + full system testing |
 
 *Estimated project start: Apr–Jun 2026 (subject to change)*
+
+---
+
+## Authors
+
+| Name | Role |
+|---|---|
+| Lim Huey Wen | Co-developer |
+| Noel Lim | Co-developer |
 
 ---
 
