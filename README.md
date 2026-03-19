@@ -28,7 +28,7 @@ It ingests Grab orders in real time, translates them into Loyverse format, track
 
 ## System Architecture
 
-![System Architecture](docs/architecture.png)
+![System Architecture](architecture.png)
 
 *Screenshot of the full system architecture diagram showing all layers — data sources, ingestion, core engine, storage, output, and Flutter dashboard.*
 
@@ -36,7 +36,7 @@ It ingests Grab orders in real time, translates them into Loyverse format, track
 
 ## Workflow — What Happens to Every Order
 
-![Data Flow](docs/dataflow.png)
+![Data Flow](dataflow.png)
 
 *Step-by-step data flow: from Grab order placement through webhook ingestion, transformation, offline queue failsafe, POS push, end-of-day reconciliation, and Infotech export.*
 
@@ -46,7 +46,7 @@ It ingests Grab orders in real time, translates them into Loyverse format, track
 
 Grab hides all customer phone numbers for privacy compliance. Our system works around this using **Grab Customer UUIDs** — anonymous alphanumeric identifiers included in every order payload.
 
-![UUID Flow](docs/uuid_flow.png)
+![UUID Flow](uuid_flow.png)
 
 *UUID lookup logic: new customers get a profile created automatically, returning customers get their visit count and spend updated — all without accessing restricted phone number data.*
 
