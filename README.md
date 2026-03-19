@@ -182,7 +182,7 @@ The reconciliation layer does not estimate or approximate. It compares every Gra
 
 A working demonstration of the core workflow — real-time order sync, unified kitchen display, and automated financial reconciliation — has been built using **Google Sheets + Apps Script** to simulate the middleware layer.
 
-**[View Live Demo →]([https://docs.google.com/spreadsheets](https://docs.google.com/spreadsheets/d/1i9kTp1SCWkNQZ-W0c8lRU1hvbQlYgSdq4f3X9R1L90g/edit?usp=sharing))**
+**[View Live Demo →](https://docs.google.com/spreadsheets/d/1i9kTp1SCWkNQZ-W0c8lRU1hvbQlYgSdq4f3X9R1L90g/edit?usp=sharing)**
 
 The prototype demonstrates:
 - `Incoming_Orders` — Grab orders auto-synced with status tracking
